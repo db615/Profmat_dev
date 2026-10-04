@@ -1,0 +1,1 @@
+"""Professor Search authentication service."""

@@ -1,0 +1,17 @@
+name: professor-backend-setup
+
+services:
+  setup:
+    build:
+      context: .
+      target: runtime
+    image: professor-auth:local
+    user: "${LOCAL_UID:-10001}:${LOCAL_GID:-10001}"
+    working_dir: /workspace
+    command: ["python", "-m", "app.manage", "init-docker"]
+    volumes:
+      - type: bind
+        source: ${SETUP_DIRECTORY:-.}
+        target: /workspace
+        bind:
+          create_host_path: false

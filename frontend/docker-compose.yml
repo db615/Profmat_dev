@@ -1,0 +1,21 @@
+name: professor-frontend
+
+services:
+  frontend:
+    build: .
+    image: professor-frontend:local
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-3000}:8080"
+    networks:
+      - auth-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/health/frontend"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  auth-network:
+    name: professor-auth-network
+    external: true
