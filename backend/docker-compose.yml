@@ -1,0 +1,89 @@
+name: professor-backend
+
+services:
+  database:
+    image: mariadb:latest
+    container_name: professor_database
+    restart: unless-stopped
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_bin
+      - --lower-case-table-names=1
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-Professorsdb}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-${DB_PASSWORD:-root}}
+      MYSQL_USER: ${DB_USER:-local}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-local}
+    ports:
+      - "127.0.0.1:${DB_PORT:-3306}:3306"
+    volumes:
+      - ./data/mysql:/var/lib/mysql
+    networks:
+      - database-network
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      start_period: 30s
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    image: professor-auth:local
+    pull_policy: never
+    env_file: .env
+    environment:
+      DATABASE_URL: mariadb+pymysql://${DB_USER:-local}:${DB_PASSWORD:-local}@database:3306/${DB_NAME:-Professorsdb}?charset=utf8mb4
+    command: ["alembic", "upgrade", "head"]
+    networks:
+      - database-network
+    depends_on:
+      database:
+        condition: service_healthy
+
+  auth:
+    build:
+      context: .
+      target: runtime
+    image: professor-auth:local
+    restart: unless-stopped
+    user: "${LOCAL_UID:-10001}:${LOCAL_GID:-10001}"
+    env_file: .env
+    environment:
+      DATABASE_URL: mariadb+pymysql://${DB_USER:-local}:${DB_PASSWORD:-local}@database:3306/${DB_NAME:-Professorsdb}?charset=utf8mb4
+      JWT_PRIVATE_KEY_FILE: /run/secrets/jwt-private.pem
+      JWT_PUBLIC_KEY_FILE: /run/secrets/jwt-public.pem
+    volumes:
+      - ./.secrets:/run/secrets:ro
+    ports:
+      - "127.0.0.1:${AUTH_PORT:-8000}:8000"
+    networks:
+      - database-network
+      - auth-network
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  tests:
+    profiles: ["tools"]
+    build:
+      context: .
+      target: test
+    image: professor-auth:test
+    environment:
+      DATABASE_URL: mariadb+pymysql://root:${DB_ROOT_PASSWORD:-${DB_PASSWORD:-root}}@database:3306/mysql?charset=utf8mb4
+    command: ["pytest", "--mariadb", "-q"]
+    networks:
+      - database-network
+    depends_on:
+      database:
+        condition: service_healthy
+
+networks:
+  database-network:
+  auth-network:
+    name: professor-auth-network
