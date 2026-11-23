@@ -6,11 +6,11 @@ import pytest
 from fastapi import HTTPException
 from sqlalchemy.orm import sessionmaker
 
-from search_prof.backend.app.core.database import utcnow
-from search_prof.backend.app.core.security import hash_secret
-from search_prof.backend.app.repositories.auth import AuthRepository
-from search_prof.backend.app.services.auth import AuthService
-from search_prof.backend.app.services.google import GoogleLogin
+from app.core.database import utcnow
+from app.core.security import hash_secret
+from app.repositories.auth import AuthRepository
+from app.services.auth import AuthService
+from app.services.google import GoogleLogin
 
 
 @pytest.fixture

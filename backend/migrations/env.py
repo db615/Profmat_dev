@@ -1,8 +1,8 @@
 from alembic import context
 from sqlalchemy import create_engine, pool
 
-from search_prof.backend.app import models
-from search_prof.backend.app.core.config import Settings
+from app import models
+from app.core.config import Settings
 
 target_metadata = models.Base.metadata
 

@@ -9,10 +9,10 @@ from fastapi import HTTPException
 from google.auth.exceptions import TransportError
 from sqlalchemy import select
 
-from search_prof.backend.app.core.database import utcnow
-from search_prof.backend.app.models import GoogleChallenge, User
-from search_prof.backend.app.services.auth import AuthService
-from search_prof.backend.app.services.google import GoogleLogin, verify_google_token
+from app.core.database import utcnow
+from app.models import GoogleChallenge, User
+from app.services.auth import AuthService
+from app.services.google import GoogleLogin, verify_google_token
 
 
 @pytest.fixture

@@ -3,9 +3,9 @@ from typing import Annotated
 from fastapi import APIRouter, Query
 from sqlalchemy import select
 
-from search_prof.backend.app.api.dependencies import AdminDep, DatabaseDep
-from search_prof.backend.app.models import User
-from search_prof.backend.app.schemas import UserRead
+from app.api.dependencies import AdminDep, DatabaseDep
+from app.models import User
+from app.schemas import UserRead
 
 router = APIRouter(prefix="/api/v1/admin", tags=["Authorization"])
 

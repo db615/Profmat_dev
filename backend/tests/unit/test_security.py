@@ -5,7 +5,7 @@ import pytest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
-from search_prof.backend.app.core.security import AccessTokens, hash_password, hash_secret, new_secret, verify_password
+from app.core.security import AccessTokens, hash_password, hash_secret, new_secret, verify_password
 
 
 @pytest.fixture(scope="module")

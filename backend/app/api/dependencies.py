@@ -8,13 +8,13 @@ from fastapi import Depends, Header, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
-from search_prof.backend.app.core.config import Settings
-from search_prof.backend.app.core.database import utcnow
-from search_prof.backend.app.core.security import hash_secret
-from search_prof.backend.app.models import User
-from search_prof.backend.app.repositories.auth import AuthRepository
-from search_prof.backend.app.services.auth import AuthService, invalid_credentials
-from search_prof.backend.app.services.google import GoogleLogin, GoogleVerifier, verify_google_token
+from app.core.config import Settings
+from app.core.database import utcnow
+from app.core.security import hash_secret
+from app.models import User
+from app.repositories.auth import AuthRepository
+from app.services.auth import AuthService, invalid_credentials
+from app.services.google import GoogleLogin, GoogleVerifier, verify_google_token
 
 bearer = HTTPBearer(auto_error=False)
 

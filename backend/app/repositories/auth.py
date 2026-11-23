@@ -6,8 +6,8 @@ from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
 
-from search_prof.backend.app.core.database import utcnow
-from search_prof.backend.app.models import AuthRateLimit, GoogleChallenge, RefreshSession, User
+from app.core.database import utcnow
+from app.models import AuthRateLimit, GoogleChallenge, RefreshSession, User
 
 
 class AuthRepository:

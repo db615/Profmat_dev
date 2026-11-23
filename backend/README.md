@@ -174,6 +174,26 @@ follow **Google Login** below and recreate the API container after setting its c
 
 ## API
 
+### Profmat planning API
+
+The diagram's student journey is available under `/api/v1`. Catalog data is public;
+all `/me`, `/matches`, `/applications`, `/outreach`, and `/checklists` routes require
+an `Authorization: Bearer <access token>` header. State-changing calls also use the
+existing `X-CSRF-Protection: 1` browser header.
+
+| Flow | Main endpoints |
+| --- | --- |
+| Discover | `GET /catalog/countries`, `/catalog/universities`, `/catalog/universities/{id}/programs`, `/catalog/universities/{id}/professors`, `/news` |
+| Student profile | `GET/PUT /me/academic-profile`, `GET/PUT /me/research-profile`, `GET/POST /me/cvs`, `GET/POST/DELETE /me/country-preferences` |
+| Matching | `POST /matches/generate`, `GET /matches` |
+| Applications | `GET/POST /applications`, `PATCH /applications/{id}/stage`, `POST /applications/{id}/documents` |
+| Professor contact | `GET/POST /outreach`, `PATCH /outreach/{id}/stage`, `POST /outreach/{id}/emails` |
+| Tasks | `GET/POST /checklists`, `POST /checklists/{id}/items`, `PATCH /checklists/{id}/items/{item_id}/complete` |
+
+`POST /matches/generate` deliberately uses a small deterministic country-preference
+score (`basic-v1`) so the UI can be built now; it is the seam where an AI matching
+service can later be introduced.
+
 | Method | Path | Purpose |
 | --- | --- | --- |
 | POST | `/api/v1/auth/register` | Email/password signup; optional `full_name` |

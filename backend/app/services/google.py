@@ -10,11 +10,11 @@ from google.oauth2 import id_token
 from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError
 
-from search_prof.backend.app.core.database import utcnow
-from search_prof.backend.app.core.security import hash_secret, new_secret
-from search_prof.backend.app.models import GoogleChallenge, User
-from search_prof.backend.app.schemas import GoogleIdentity
-from search_prof.backend.app.services.auth import AuthService, LoginResult, invalid_credentials
+from app.core.database import utcnow
+from app.core.security import hash_secret, new_secret
+from app.models import GoogleChallenge, User
+from app.schemas import GoogleIdentity
+from app.services.auth import AuthService, LoginResult, invalid_credentials
 
 GoogleVerifier = Callable[[str, str], dict]
 

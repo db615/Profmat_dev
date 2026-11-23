@@ -10,6 +10,7 @@ import {
 } from './api'
 import type { Session } from './api'
 import GoogleSignIn from './GoogleSignIn'
+import ProfmatApp from './ProfmatApp'
 import './App.css'
 
 type Mode = 'login' | 'register'
@@ -203,80 +204,66 @@ function App() {
     setError('')
     try {
       await logout()
-      setSession(null)
-      setMode('login')
-      setLinkingGoogle(false)
-      setNotice('You have been signed out.')
-    } catch (failure) {
-      setError(failure instanceof Error ? failure.message : 'Sign out failed. Please try again.')
+    } catch {
+      // Cookie may already be cleared.
     } finally {
+      setSession(null)
+      setLinkingGoogle(false)
+      setNotice('')
       setPending(null)
     }
+  }
+
+  if (session && !restoring) {
+    return <ProfmatApp session={session} onLogout={() => void signOut()} />
   }
 
   return (
     <div className="app-shell">
       <header className="site-header">
-        <a className="brand" href="/" aria-label="Professor Search home">
-          <span className="brand-mark"><BookOpen size={23} strokeWidth={1.7} /></span>
-          <span>Professor <strong>Search</strong></span>
-        </a>
-        <div className={`connection connection-${health}`} role="status">
-          <span className="status-dot" aria-hidden="true" />
-          {health === 'online' ? 'API online' : health === 'offline' ? 'API offline' : 'Connecting'}
+        <div className="brand">
+          <div className="brand-mark">PS</div>
+          <div>
+            <p className="brand-name">Professor Search</p>
+            <p className="brand-subtitle">PROFMAT - Find your ideal professor</p>
+          </div>
+        </div>
+        <div className="header-status" role="status" aria-live="polite">
+          <span className={`status-dot ${health}`} aria-hidden="true" />
+          <span>{health === 'checking' ? 'Checking backend' : health === 'online' ? 'Backend online' : 'Backend offline'}</span>
         </div>
       </header>
-
-      <main className="account-layout">
-        <section className="account-panel" aria-labelledby="account-heading" aria-busy={restoring}>
-          <div className="eyebrow"><span className="short-rule" /> YOUR ACCOUNT</div>
-          <h1 id="account-heading">
-            {session ? "You're signed in." : mode === 'login' ? 'Welcome back.' : 'Create your account.'}
-          </h1>
-          <p className="account-subtitle">
-            {session ? session.user.full_name || session.user.email : 'Your place in the academic community.'}
-          </p>
-
-          {!session && (
-            <div className="auth-tabs" role="tablist" aria-label="Account access">
-              {(['login', 'register'] as const).map((tab) => (
-                <button
-                  key={tab}
-                  id={`tab-${tab}`}
-                  role="tab"
-                  type="button"
-                  aria-selected={mode === tab}
-                  aria-controls="auth-form"
-                  tabIndex={mode === tab ? 0 : -1}
-                  disabled={!!pending || restoring}
-                  onClick={() => changeMode(tab)}
-                  onKeyDown={moveTab}
-                >
-                  {tab === 'login' ? 'Sign in' : 'Create account'}
-                </button>
-              ))}
+      <main className="auth-layout">
+        <section className="auth-card" aria-live="polite">
+          <div className="card-header">
+            <div>
+              <h1>Access your account</h1>
+              <p>Sign in or create an account to start your PROFMAT journey.</p>
             </div>
-          )}
-
-          {notice && !error && <div className="notice" role="status"><Check size={18} />{notice}</div>}
-          {error && <div className="error-message" role="alert"><CircleAlert size={18} />{error}</div>}
-
+            <div className="tab-group" role="tablist" aria-label="Account access">
+              <button id="tab-login" role="tab" aria-selected={mode === 'login'} className={mode === 'login' ? 'active' : ''} onClick={() => changeMode('login')} onKeyDown={moveTab}>Sign in</button>
+              <button id="tab-register" role="tab" aria-selected={mode === 'register'} className={mode === 'register' ? 'active' : ''} onClick={() => changeMode('register')} onKeyDown={moveTab}>Create account</button>
+            </div>
+          </div>
+          {error && <div className="form-alert error" role="alert"><CircleAlert size={18} /><span>{error}</span></div>}
+          {notice && !error && <div className="form-alert notice" role="status"><Check size={18} /><span>{notice}</span></div>}
           {restoring ? (
-            <div className="restoring"><LoaderCircle className="spin" size={22} /> Checking your session...</div>
+            <div className="restoring"><LoaderCircle className="spin" size={20} /><span>Restoring your session...</span></div>
           ) : session ? (
-            <div className="profile-view">
-              <div className="profile-heading">
-                <span className="profile-avatar"><UserRound size={25} /></span>
-                <div><h2>Account details</h2><span className="session-label"><ShieldCheck size={14} /> Session active</span></div>
+            <div className="profile-panel">
+              <div className="profile-header">
+                <div className="avatar"><UserRound size={26} /></div>
+                <div>
+                  <h2>Welcome back</h2>
+                  <p>{session.user.full_name || session.user.email}</p>
+                </div>
+                <span className="badge"><ShieldCheck size={16} />{session.user.role}</span>
               </div>
-              <dl className="profile-details">
-                <div><dt>Email address</dt><dd>{session.user.email}</dd></div>
-                <div><dt>Account ID</dt><dd className="account-id">{session.user.id}</dd></div>
+              <dl className="profile-grid">
+                <div><dt>Email</dt><dd>{session.user.email}</dd></div>
                 <div><dt>Role</dt><dd>{session.user.role === 'ADMIN' ? 'Administrator' : 'User'}</dd></div>
                 <div><dt>Email status</dt><dd>{session.user.email_verified ? 'Verified' : 'Not yet verified'}</dd></div>
-                <div><dt>Joined</dt><dd>{new Date(session.user.created_at).toLocaleDateString(undefined, {
-                  year: 'numeric', month: 'short', day: 'numeric',
-                })}</dd></div>
+                <div><dt>Joined</dt><dd>{new Date(session.user.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</dd></div>
               </dl>
               <div className="profile-actions">
                 <button className="primary-button" onClick={() => void verifyProfile()} disabled={!!pending}>
@@ -336,16 +323,14 @@ function App() {
           )}
           <div className="account-footnote"><LockKeyhole size={14} /> Private account access</div>
         </section>
-
         <aside className="community-panel" aria-label="Academic community">
           <figure>
-            <img src="/campus.jpg" alt="Graduates celebrating together and throwing their caps into the sky" width="1400" height="933" fetchPriority="high" />
+            <img src="/campus.jpg" alt="Graduates celebrating" width="1400" height="933" fetchPriority="high" />
             <figcaption><span>The academic community</span><span className="caption-mark" aria-hidden="true">PS / 01</span></figcaption>
           </figure>
           <div className="community-signature"><span className="signature-line" /><BookOpen size={20} strokeWidth={1.5} /><span className="signature-line" /></div>
         </aside>
       </main>
-
       <footer className="site-footer"><span>Professor Search</span><span>Account access</span></footer>
     </div>
   )

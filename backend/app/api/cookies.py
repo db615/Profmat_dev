@@ -1,6 +1,6 @@
 from fastapi import Response
 
-from search_prof.backend.app.core.config import Settings
+from app.core.config import Settings
 
 REFRESH_COOKIE = "professor_refresh"
 REFRESH_PATH = "/api/v1/auth"

@@ -4,11 +4,11 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
-from search_prof.backend.app.api.cookies import GOOGLE_COOKIE, REFRESH_COOKIE
-from search_prof.backend.app.api.dependencies import get_google_verifier
-from search_prof.backend.app.core.config import Settings
-from search_prof.backend.app.main import create_app
-from search_prof.backend.app.models import User
+from app.api.cookies import GOOGLE_COOKIE, REFRESH_COOKIE
+from app.api.dependencies import get_google_verifier
+from app.core.config import Settings
+from app.main import create_app
+from app.models import User
 
 PASSWORD = "long test password"
 REGISTER = {"email": "person@example.com", "password": PASSWORD, "full_name": "Example Person"}

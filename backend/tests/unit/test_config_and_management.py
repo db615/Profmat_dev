@@ -7,12 +7,12 @@ from fastapi import HTTPException
 from pydantic import ValidationError
 from sqlalchemy import select
 
-from search_prof.backend.app.core.config import Settings
-from search_prof.backend.app.core.database import utcnow
-from search_prof.backend.app.core.security import AccessTokens, hash_secret, new_secret
-from search_prof.backend.app.manage import cleanup, init_dev, init_docker, promote_admin
-from search_prof.backend.app.models import RefreshSession
-from search_prof.backend.app.services.auth import AuthService
+from app.core.config import Settings
+from app.core.database import utcnow
+from app.core.security import AccessTokens, hash_secret, new_secret
+from app.manage import cleanup, init_dev, init_docker, promote_admin
+from app.models import RefreshSession
+from app.services.auth import AuthService
 
 
 def settings(**changes):

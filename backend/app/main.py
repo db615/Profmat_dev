@@ -8,13 +8,12 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from search_prof.backend.app.api import auth
-from search_prof.backend.app.api.cookies import clear_google_cookie, clear_refresh_cookie
-from search_prof.backend.app.api.dependencies import DatabaseDep
-from search_prof.backend.app.core.config import Settings
-from search_prof.backend.app.core.database import create_database_engine
-from search_prof.backend.app.core.security import AccessTokens
-from search_prof.backend.app.api import admin
+from app.api import admin, auth, profmat
+from app.api.cookies import clear_google_cookie, clear_refresh_cookie
+from app.api.dependencies import DatabaseDep
+from app.core.config import Settings
+from app.core.database import create_database_engine
+from app.core.security import AccessTokens
 
 
 def create_app(
@@ -55,7 +54,7 @@ def create_app(
         CORSMiddleware,
         allow_origins=settings.allowed_origins,
         allow_credentials=True,
-        allow_methods=["GET", "POST"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
         allow_headers=["Authorization", "Content-Type", "X-CSRF-Protection"],
     )
 
@@ -96,4 +95,5 @@ def create_app(
 
     app.include_router(auth.router)
     app.include_router(admin.router)
+    app.include_router(profmat.router)
     return app

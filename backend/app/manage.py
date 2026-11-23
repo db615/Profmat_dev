@@ -9,11 +9,11 @@ from pydantic import EmailStr, TypeAdapter
 from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
-from search_prof.backend.app.core.config import Settings
-from search_prof.backend.app.core.database import create_database_engine, utcnow
-from search_prof.backend.app.core.security import new_secret
-from search_prof.backend.app.models import AuthRateLimit, GoogleChallenge, RefreshSession
-from search_prof.backend.app.repositories.auth import AuthRepository
+from app.core.config import Settings
+from app.core.database import create_database_engine, utcnow
+from app.core.security import new_secret
+from app.models import AuthRateLimit, GoogleChallenge, RefreshSession
+from app.repositories.auth import AuthRepository
 
 
 def write_private_file(path: Path, content: bytes) -> None:

@@ -8,9 +8,9 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from sqlalchemy.schema import CreateSchema, DropSchema
 
-from search_prof.backend.app.core.config import Settings
-from search_prof.backend.app.core.database import Base, create_database_engine
-from search_prof.backend.app.core.security import AccessTokens
+from app.core.config import Settings
+from app.core.database import Base, create_database_engine
+from app.core.security import AccessTokens
 
 
 def pytest_addoption(parser):

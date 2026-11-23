@@ -4,10 +4,10 @@ import pytest
 from fastapi import HTTPException
 from sqlalchemy import select
 
-from search_prof.backend.app.core.database import utcnow
-from search_prof.backend.app.core.security import hash_secret
-from search_prof.backend.app.models import RefreshSession, User
-from search_prof.backend.app.services.auth import AuthService
+from app.core.database import utcnow
+from app.core.security import hash_secret
+from app.models import RefreshSession, User
+from app.services.auth import AuthService
 
 
 @pytest.fixture

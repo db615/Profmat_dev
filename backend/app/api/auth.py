@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Request, Response
 
-from search_prof.backend.app.api.cookies import (
+from app.api.cookies import (
     GOOGLE_COOKIE,
     GOOGLE_PATH,
     REFRESH_COOKIE,
@@ -8,7 +8,7 @@ from search_prof.backend.app.api.cookies import (
     clear_google_cookie,
     clear_refresh_cookie,
 )
-from search_prof.backend.app.api.dependencies import (
+from app.api.dependencies import (
     AuthDep,
     GoogleDep,
     SettingsDep,
@@ -16,9 +16,9 @@ from search_prof.backend.app.api.dependencies import (
     limit_auth_requests,
     require_browser_protection,
 )
-from search_prof.backend.app.core.config import Settings
-from search_prof.backend.app.core.database import utcnow
-from search_prof.backend.app.schemas import (
+from app.core.config import Settings
+from app.core.database import utcnow
+from app.schemas import (
     GoogleInput,
     GoogleNonceResponse,
     LoginInput,
@@ -26,7 +26,7 @@ from search_prof.backend.app.schemas import (
     TokenResponse,
     UserRead,
 )
-from search_prof.backend.app.services.auth import LoginResult
+from app.services.auth import LoginResult
 
 router = APIRouter(
     prefix="/api/v1/auth",

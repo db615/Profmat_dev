@@ -6,10 +6,10 @@ from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from search_prof.backend.app.core.database import utcnow
-from search_prof.backend.app.core.security import AccessTokens, hash_password, hash_secret, new_secret, verify_password
-from search_prof.backend.app.models import RefreshSession, User
-from search_prof.backend.app.repositories.auth import AuthRepository
+from app.core.database import utcnow
+from app.core.security import AccessTokens, hash_password, hash_secret, new_secret, verify_password
+from app.models import RefreshSession, User
+from app.repositories.auth import AuthRepository
 
 DUMMY_PASSWORD_HASH = hash_password(new_secret())
 
