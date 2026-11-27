@@ -253,3 +253,61 @@ class UniversityAdvertisementRead(ORMBase):
     target_url: str | None = None
     start_date: date | None = None
     end_date: date | None = None
+
+
+class ProfessorDetailRead(ProfessorRead):
+    university: UniversityRead
+    department: DepartmentRead | None = None
+
+
+class ProfessorPage(BaseModel):
+    items: list[ProfessorDetailRead]
+    total: int
+    limit: int
+    offset: int
+
+
+class SuggestionRead(BaseModel):
+    type: str
+    id: UUID
+    label: str
+    subtitle: str | None = None
+
+
+class ProfessorFiltersRead(BaseModel):
+    countries: list[CountryRead]
+    universities: list[UniversityRead]
+    departments: list[DepartmentRead]
+
+
+class PublicationRead(BaseModel):
+    title: str
+    venue: str | None = None
+    year: int | None = None
+    url: str | None = None
+
+
+class ProfessorOpportunitiesRead(BaseModel):
+    funding: list[FundingRead]
+    programs: list[CourseProgramRead]
+
+
+class HomeRead(BaseModel):
+    news: list[NewsRead]
+    advertisements: list[UniversityAdvertisementRead]
+    featured_funding: list[FundingRead]
+
+
+class HomeSummaryRead(BaseModel):
+    countries: int
+    universities: int
+    professors: int
+    programs: int
+    funding: int
+    news: int
+
+
+class ProfileCompletenessRead(BaseModel):
+    percentage: int
+    completed: list[str]
+    missing: list[str]

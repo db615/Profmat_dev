@@ -1,5 +1,3 @@
-import pytest
-
 from app.seed import seed_database
 
 PASSWORD = "long test password"
@@ -9,11 +7,6 @@ def register(client, email: str = "student@example.com") -> dict[str, str]:
     response = client.post("/api/v1/auth/register", json={"email": email, "password": PASSWORD})
     assert response.status_code == 201
     return {"Authorization": f"Bearer {response.json()['access_token']}"}
-
-
-@pytest.fixture
-def seeded(session):
-    return seed_database(session)
 
 
 def test_seed_is_idempotent(session):

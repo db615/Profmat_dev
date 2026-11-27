@@ -187,12 +187,19 @@ existing `X-CSRF-Protection: 1` browser header.
 
 | Flow | Main endpoints |
 | --- | --- |
-| Discover | `GET /countries`, `/countries/{code}/visas`, `/universities`, `/universities/{id}`, `/universities/{id}/programs`, `/universities/{id}/professors`, `/universities/{id}/funding`, `/news`, `/advertisements` |
-| Student profile | `GET/PUT /me/academic-profile`, `GET/PUT /me/research-profile`, `GET/POST /me/cvs`, `GET/POST /me/preferences`, `DELETE /me/preferences/{id}` |
+| Home | `GET /home`, `/home/summary`, `/news`, `/advertisements` |
+| Discover | `GET /countries`, `/countries/{code}/visas`, `/universities`, `/universities/{id}`, `/universities/{id}/programs`, `/universities/{id}/departments`, `/universities/{id}/professors`, `/universities/{id}/funding` |
+| Professors | `GET /professors` (`q`, `university_id`, `department_id`, `country_code`, `sort`, `limit`, `offset`), `/professors/filters`, `/professors/search-suggestions`, `/professors/{id}`, `/{id}/research-interests`, `/{id}/publications`, `/{id}/opportunities`, `/{id}/related-professors` |
+| Student profile | `GET/PUT /me/academic-profile`, `GET/PUT /me/research-profile`, `GET/POST /me/cvs`, `GET/POST /me/preferences`, `DELETE /me/preferences/{id}`, `GET /me/completeness` |
 | Matching | `POST /matches/generate`, `GET /matches` |
 | Applications | `GET/POST /applications`, `PATCH /applications/{id}/stage`, `POST /applications/{id}/documents` |
 | Professor contact | `GET/POST /outreach`, `PATCH /outreach/{id}/stage`, `POST /outreach/{id}/emails` |
 | Tasks | `GET/POST /checklists`, `POST /checklists/{id}/items`, `PATCH /checklists/{id}/items/{item_id}/complete` |
+
+`GET /professors` returns `{ items, total, limit, offset }`; each item includes nested
+`university` and `department`. Publications are not stored yet, so
+`/professors/{id}/publications` returns an empty list as a documented seam.
+`GET /me/completeness` scores six profile checks.
 
 `POST /matches/generate` deliberately uses a small deterministic country-preference
 score (`basic-v1`) so the UI can be built now; it is the seam where an AI matching

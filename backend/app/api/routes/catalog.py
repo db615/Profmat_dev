@@ -9,6 +9,7 @@ from app.api.dependencies import DatabaseDep
 from app.models import (
     Country,
     CourseProgram,
+    Department,
     Funding,
     News,
     Professor,
@@ -19,6 +20,7 @@ from app.models import (
 from app.schemas.profmat import (
     CountryRead,
     CourseProgramRead,
+    DepartmentRead,
     FundingRead,
     NewsRead,
     ProfessorRead,
@@ -41,12 +43,18 @@ def list_visas(country_code: str, session: DatabaseDep) -> list[VisaInformationR
 
 
 def list_universities(
-    session: DatabaseDep, country_code: str | None = None
+    session: DatabaseDep,
+    country_code: str | None = None,
+    q: str | None = Query(default=None, max_length=200),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
 ) -> list[UniversityRead]:
     stmt = select(University)
     if country_code:
         stmt = stmt.where(University.country_code == country_code)
-    return list(session.scalars(stmt.order_by(University.name)))
+    if q:
+        stmt = stmt.where(University.name.ilike(f"%{q.strip()}%"))
+    return list(session.scalars(stmt.order_by(University.name).offset(offset).limit(limit)))
 
 
 def university_detail(university_id: UUID, session: DatabaseDep) -> UniversityRead:
@@ -54,6 +62,18 @@ def university_detail(university_id: UUID, session: DatabaseDep) -> UniversityRe
     if university is None:
         raise HTTPException(status_code=404, detail="University not found")
     return university
+
+
+def list_departments(university_id: UUID, session: DatabaseDep) -> list[DepartmentRead]:
+    if session.get(University, university_id) is None:
+        raise HTTPException(status_code=404, detail="University not found")
+    return list(
+        session.scalars(
+            select(Department)
+            .where(Department.university_id == university_id)
+            .order_by(Department.name)
+        )
+    )
 
 
 def list_programs(university_id: UUID, session: DatabaseDep) -> list[CourseProgramRead]:
@@ -119,6 +139,12 @@ router.add_api_route(
     list_programs,
     methods=["GET"],
     response_model=list[CourseProgramRead],
+)
+router.add_api_route(
+    "/universities/{university_id}/departments",
+    list_departments,
+    methods=["GET"],
+    response_model=list[DepartmentRead],
 )
 router.add_api_route(
     "/universities/{university_id}/professors",

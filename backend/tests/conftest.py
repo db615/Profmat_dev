@@ -13,6 +13,7 @@ from app.core.config import Settings
 from app.core.database import Base, create_database_engine
 from app.core.security import AccessTokens
 from app.main import create_app
+from app.seed import seed_database
 
 
 def pytest_addoption(parser):
@@ -73,6 +74,11 @@ def database(request):
 def session(database):
     with sessionmaker(bind=database, expire_on_commit=False)() as session:
         yield session
+
+
+@pytest.fixture
+def seeded(session):
+    return seed_database(session)
 
 
 @pytest.fixture

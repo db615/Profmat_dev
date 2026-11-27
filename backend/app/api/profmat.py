@@ -1,13 +1,24 @@
 from fastapi import APIRouter, Depends
 
 from app.api.dependencies import require_browser_protection
-from app.api.routes import applications, catalog, checklists, matching, outreach, profile
+from app.api.routes import (
+    applications,
+    catalog,
+    checklists,
+    home,
+    matching,
+    outreach,
+    professors,
+    profile,
+)
 
 router = APIRouter(
     prefix="/api/v1",
     dependencies=[Depends(require_browser_protection)],
 )
 router.include_router(catalog.router)
+router.include_router(professors.router)
+router.include_router(home.router)
 router.include_router(profile.router)
 router.include_router(matching.router)
 router.include_router(applications.router)
