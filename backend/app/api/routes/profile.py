@@ -7,11 +7,17 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 
 from app.api.dependencies import DatabaseDep, UserDep
+from app.api.routes.common import commit
 from app.core.database import utcnow
-from app.api.routes.common import commit, get_owned
-from app.models import AcademicProfile, CountryPreference, CV, ResearchProfile
+from app.models import CV, AcademicProfile, CountryPreference, ResearchProfile
+from app.schemas.profmat import (
+    AcademicProfileRead,
+    CountryPreferenceRead,
+    CVRead,
+    ResearchProfileRead,
+)
 
-router = APIRouter(prefix="/api/v1", tags=["Profile"])
+router = APIRouter(tags=["Profile"])
 
 
 class Payload(BaseModel):
@@ -45,13 +51,18 @@ class PreferenceInput(Payload):
     priority: int | None = Field(default=None, ge=1, le=100)
 
 
-def read_academic_profile(user: UserDep, session: DatabaseDep):
-    profile = session.scalars(select(AcademicProfile).where(AcademicProfile.user_id == user.id)).first()
-    return profile
+def read_academic_profile(user: UserDep, session: DatabaseDep) -> AcademicProfileRead | None:
+    return session.scalars(
+        select(AcademicProfile).where(AcademicProfile.user_id == user.id)
+    ).first()
 
 
-def save_academic_profile(data: AcademicProfileInput, user: UserDep, session: DatabaseDep):
-    profile = session.scalars(select(AcademicProfile).where(AcademicProfile.user_id == user.id)).first()
+def save_academic_profile(
+    data: AcademicProfileInput, user: UserDep, session: DatabaseDep
+) -> AcademicProfileRead:
+    profile = session.scalars(
+        select(AcademicProfile).where(AcademicProfile.user_id == user.id)
+    ).first()
     if profile is None:
         profile = AcademicProfile(user_id=user.id, **data.model_dump())
     else:
@@ -60,13 +71,18 @@ def save_academic_profile(data: AcademicProfileInput, user: UserDep, session: Da
     return commit(session, profile)
 
 
-def read_research_profile(user: UserDep, session: DatabaseDep):
-    profile = session.scalars(select(ResearchProfile).where(ResearchProfile.user_id == user.id)).first()
-    return profile
+def read_research_profile(user: UserDep, session: DatabaseDep) -> ResearchProfileRead | None:
+    return session.scalars(
+        select(ResearchProfile).where(ResearchProfile.user_id == user.id)
+    ).first()
 
 
-def save_research_profile(data: ResearchProfileInput, user: UserDep, session: DatabaseDep):
-    profile = session.scalars(select(ResearchProfile).where(ResearchProfile.user_id == user.id)).first()
+def save_research_profile(
+    data: ResearchProfileInput, user: UserDep, session: DatabaseDep
+) -> ResearchProfileRead:
+    profile = session.scalars(
+        select(ResearchProfile).where(ResearchProfile.user_id == user.id)
+    ).first()
     if profile is None:
         profile = ResearchProfile(user_id=user.id, **data.model_dump())
     else:
@@ -75,23 +91,27 @@ def save_research_profile(data: ResearchProfileInput, user: UserDep, session: Da
     return commit(session, profile)
 
 
-def list_cvs(user: UserDep, session: DatabaseDep):
+def list_cvs(user: UserDep, session: DatabaseDep) -> list[CVRead]:
     return list(session.scalars(select(CV).where(CV.user_id == user.id)))
 
 
-def add_cv(data: CVInput, user: UserDep, session: DatabaseDep):
+def add_cv(data: CVInput, user: UserDep, session: DatabaseDep) -> CVRead:
     return commit(session, CV(user_id=user.id, uploaded_at=utcnow(), **data.model_dump()))
 
 
-def list_preferences(user: UserDep, session: DatabaseDep):
-    return list(session.scalars(select(CountryPreference).where(CountryPreference.user_id == user.id)))
+def list_preferences(user: UserDep, session: DatabaseDep) -> list[CountryPreferenceRead]:
+    return list(
+        session.scalars(select(CountryPreference).where(CountryPreference.user_id == user.id))
+    )
 
 
-def add_preference(data: PreferenceInput, user: UserDep, session: DatabaseDep):
+def add_preference(
+    data: PreferenceInput, user: UserDep, session: DatabaseDep
+) -> CountryPreferenceRead:
     return commit(session, CountryPreference(user_id=user.id, **data.model_dump()))
 
 
-def delete_preference(preference_id: UUID, user: UserDep, session: DatabaseDep):
+def delete_preference(preference_id: UUID, user: UserDep, session: DatabaseDep) -> dict[str, str]:
     preference = session.get(CountryPreference, preference_id)
     if preference is None or preference.user_id != user.id:
         raise HTTPException(status_code=404, detail="Preference not found")
@@ -100,12 +120,54 @@ def delete_preference(preference_id: UUID, user: UserDep, session: DatabaseDep):
     return {"status": "deleted"}
 
 
-router.add_api_route("/me/academic-profile", read_academic_profile, methods=["GET"])
-router.add_api_route("/me/academic-profile", save_academic_profile, methods=["PUT"])
-router.add_api_route("/me/research-profile", read_research_profile, methods=["GET"])
-router.add_api_route("/me/research-profile", save_research_profile, methods=["PUT"])
-router.add_api_route("/me/cvs", list_cvs, methods=["GET"])
-router.add_api_route("/me/cvs", add_cv, methods=["POST"], status_code=status.HTTP_201_CREATED)
-router.add_api_route("/me/preferences", list_preferences, methods=["GET"])
-router.add_api_route("/me/preferences", add_preference, methods=["POST"], status_code=status.HTTP_201_CREATED)
-router.add_api_route("/me/preferences/{preference_id}", delete_preference, methods=["DELETE"])
+router.add_api_route(
+    "/me/academic-profile",
+    read_academic_profile,
+    methods=["GET"],
+    response_model=AcademicProfileRead | None,
+)
+router.add_api_route(
+    "/me/academic-profile",
+    save_academic_profile,
+    methods=["PUT"],
+    response_model=AcademicProfileRead,
+)
+router.add_api_route(
+    "/me/research-profile",
+    read_research_profile,
+    methods=["GET"],
+    response_model=ResearchProfileRead | None,
+)
+router.add_api_route(
+    "/me/research-profile",
+    save_research_profile,
+    methods=["PUT"],
+    response_model=ResearchProfileRead,
+)
+router.add_api_route("/me/cvs", list_cvs, methods=["GET"], response_model=list[CVRead])
+router.add_api_route(
+    "/me/cvs",
+    add_cv,
+    methods=["POST"],
+    status_code=status.HTTP_201_CREATED,
+    response_model=CVRead,
+)
+router.add_api_route(
+    "/me/preferences",
+    list_preferences,
+    methods=["GET"],
+    response_model=list[CountryPreferenceRead],
+)
+router.add_api_route(
+    "/me/preferences",
+    add_preference,
+    methods=["POST"],
+    status_code=status.HTTP_201_CREATED,
+    response_model=CountryPreferenceRead,
+)
+router.add_api_route(
+    "/me/preferences/{preference_id}",
+    delete_preference,
+    methods=["DELETE"],
+    response_model=dict[str, str],
+)

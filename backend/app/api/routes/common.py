@@ -4,8 +4,6 @@ from uuid import UUID
 
 from fastapi import HTTPException
 
-from app.core.database import utcnow
-
 
 def commit(session, instance):
     session.add(instance)

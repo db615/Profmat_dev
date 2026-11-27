@@ -12,8 +12,10 @@ from sqlalchemy.orm import Session
 from app.core.config import Settings
 from app.core.database import create_database_engine, utcnow
 from app.core.security import new_secret
+from app.etl import sync_crawler
 from app.models import AuthRateLimit, GoogleChallenge, RefreshSession
 from app.repositories.auth import AuthRepository
+from app.seed import seed_database
 
 
 def write_private_file(path: Path, content: bytes) -> None:
@@ -73,6 +75,8 @@ def init_dev(root: Path, db_port: int, api_port: int) -> None:
         "COOKIE_SAMESITE": "lax",
         "ALLOWED_ORIGINS": json.dumps(["http://localhost:3000", f"http://localhost:{api_port}"]),
         "AUTH_REQUESTS_PER_MINUTE": "30",
+        "CRAWLER_DATABASE_URL": "",
+        "CRAWLER_DEFAULT_COUNTRY": "US",
     }
     write_private_file(
         env_path, "".join(f"{key}={value}\n" for key, value in values.items()).encode()
@@ -126,6 +130,21 @@ def main() -> None:
     docker_setup.add_argument("--api-port", type=int, default=8000)
     admin = commands.add_parser("promote-admin", help="Promote an existing account using DB access")
     admin.add_argument("email")
+    commands.add_parser("seed", help="Insert or update the normalized demo catalog data")
+    sync = commands.add_parser(
+        "sync-crawler", help="ETL raw crawler tables into the normalized catalog"
+    )
+    sync.add_argument(
+        "--source-url",
+        default=os.environ.get("CRAWLER_DATABASE_URL") or None,
+        help="SQLAlchemy URL for the crawler database (defaults to CRAWLER_DATABASE_URL)",
+    )
+    sync.add_argument(
+        "--default-country",
+        default=os.environ.get("CRAWLER_DEFAULT_COUNTRY", "US"),
+        help="Country code applied to universities that have none in the raw data",
+    )
+    sync.add_argument("--dry-run", action="store_true", help="Roll back instead of committing")
     commands.add_parser("cleanup", help="Remove expired sessions, Google nonces and rate buckets")
     arguments = parser.parse_args()
     if arguments.command == "init-dev":
@@ -134,13 +153,39 @@ def main() -> None:
     if arguments.command == "init-docker":
         init_docker(Path.cwd(), arguments.db_port, arguments.api_port)
         return
-    engine = create_database_engine(Settings().database_url)
-    with Session(engine, expire_on_commit=False) as session:
-        if arguments.command == "promote-admin":
-            promote_admin(session, arguments.email)
-        else:
-            cleanup(session)
-    engine.dispose()
+    settings = Settings()
+    engine = create_database_engine(settings.database_url)
+    source_engine = None
+    if arguments.command == "sync-crawler":
+        source_url = arguments.source_url or settings.crawler_database_url
+        if not source_url:
+            raise SystemExit("Provide --source-url or set CRAWLER_DATABASE_URL")
+        source_engine = create_database_engine(source_url)
+    try:
+        with Session(engine, expire_on_commit=False) as session:
+            if arguments.command == "promote-admin":
+                promote_admin(session, arguments.email)
+            elif arguments.command == "seed":
+                counts = seed_database(session)
+                print(
+                    "Seeded demo data: "
+                    + ", ".join(f"{name}={count}" for name, count in counts.items())
+                )
+            elif arguments.command == "sync-crawler":
+                counts = sync_crawler(
+                    session,
+                    source_engine,
+                    arguments.default_country,
+                    dry_run=arguments.dry_run,
+                )
+                label = "Crawler sync (dry run)" if arguments.dry_run else "Crawler sync"
+                print(label + ": " + ", ".join(f"{name}={count}" for name, count in counts.items()))
+            else:
+                cleanup(session)
+    finally:
+        engine.dispose()
+        if source_engine is not None:
+            source_engine.dispose()
 
 
 if __name__ == "__main__":

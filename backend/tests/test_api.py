@@ -1,35 +1,13 @@
 from unittest.mock import Mock
 
-import pytest
-from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from app.api.cookies import GOOGLE_COOKIE, REFRESH_COOKIE
 from app.api.dependencies import get_google_verifier
-from app.core.config import Settings
-from app.main import create_app
 from app.models import User
 
 PASSWORD = "long test password"
 REGISTER = {"email": "person@example.com", "password": PASSWORD, "full_name": "Example Person"}
-
-
-@pytest.fixture
-def app(database, tokens):
-    settings = Settings(
-        _env_file=None,
-        environment="test",
-        database_url="sqlite+pysqlite://",
-        cookie_secure=False,
-        google_client_id="test-client",
-    )
-    return create_app(settings, database, tokens)
-
-
-@pytest.fixture
-def client(app):
-    with TestClient(app, headers={"X-CSRF-Protection": "1"}) as client:
-        yield client
 
 
 def authorization(response):

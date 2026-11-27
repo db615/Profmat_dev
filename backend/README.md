@@ -106,6 +106,10 @@ directory is `backend/data/mysql`, not the legacy scraper's `professor_search/da
 If another project owns the `professor_database` container name, resolve that name
 conflict before starting this stack; do not delete its database files.
 
+The optional crawler sync reads from a separate source database configured with
+`CRAWLER_DATABASE_URL` (for example `mysql+pymysql://...`); `CRAWLER_DEFAULT_COUNTRY`
+sets the country applied to raw universities, which carry no country column.
+
 ### Start The Frontend Separately
 
 After the backend is running, start the frontend from its own directory:
@@ -183,8 +187,8 @@ existing `X-CSRF-Protection: 1` browser header.
 
 | Flow | Main endpoints |
 | --- | --- |
-| Discover | `GET /catalog/countries`, `/catalog/universities`, `/catalog/universities/{id}/programs`, `/catalog/universities/{id}/professors`, `/news` |
-| Student profile | `GET/PUT /me/academic-profile`, `GET/PUT /me/research-profile`, `GET/POST /me/cvs`, `GET/POST/DELETE /me/country-preferences` |
+| Discover | `GET /countries`, `/countries/{code}/visas`, `/universities`, `/universities/{id}`, `/universities/{id}/programs`, `/universities/{id}/professors`, `/universities/{id}/funding`, `/news`, `/advertisements` |
+| Student profile | `GET/PUT /me/academic-profile`, `GET/PUT /me/research-profile`, `GET/POST /me/cvs`, `GET/POST /me/preferences`, `DELETE /me/preferences/{id}` |
 | Matching | `POST /matches/generate`, `GET /matches` |
 | Applications | `GET/POST /applications`, `PATCH /applications/{id}/stage`, `POST /applications/{id}/documents` |
 | Professor contact | `GET/POST /outreach`, `PATCH /outreach/{id}/stage`, `POST /outreach/{id}/emails` |
@@ -193,6 +197,29 @@ existing `X-CSRF-Protection: 1` browser header.
 `POST /matches/generate` deliberately uses a small deterministic country-preference
 score (`basic-v1`) so the UI can be built now; it is the seam where an AI matching
 service can later be introduced.
+
+### Crawler ETL
+
+The normalized catalog can be populated from the crawler's raw tables (branch
+`ps/feat/llm_filter`) instead of the demo seed. Keep the crawler in a separate
+database/schema: its `professors` and `department` tables collide with the app schema,
+and migration `0003` now fails loudly if an incompatible table already exists.
+
+```sh
+# .env
+CRAWLER_DATABASE_URL=mysql+pymysql://user:password@host:3306/Professorsdb?charset=utf8mb4
+CRAWLER_DEFAULT_COUNTRY=US
+
+docker compose exec auth python -m app.manage sync-crawler
+docker compose exec auth python -m app.manage sync-crawler --dry-run
+```
+
+The sync upserts universities, departments, professors and course programs by natural
+key and merges `personal_info.research_interest` into `professors.research_areas`. It is
+idempotent and never deletes app data. The raw schema has no country column, so
+`--default-country` (or `CRAWLER_DEFAULT_COUNTRY`) must name a seeded country. Raw
+publications/awards, tuition and scholarships have no normalized target yet and are
+skipped (see `PROJECT_NOTES.md`).
 
 | Method | Path | Purpose |
 | --- | --- | --- |
@@ -309,7 +336,13 @@ docker compose --profile tools run --rm tests ruff check .
 docker compose --profile tools run --rm tests ruff format --check .
 docker compose exec auth alembic check
 docker compose exec auth python -m app.manage cleanup
+docker compose exec auth python -m app.manage seed
+docker compose exec auth python -m app.manage sync-crawler
 ```
+
+`seed` inserts or updates the normalized demo catalog (countries, universities,
+departments, professors, programs, funding, news, advertisements, visas). It uses
+deterministic UUIDs and upserts by natural key, so it is safe to run repeatedly.
 
 The test service runs `pytest --mariadb -q` against MariaDB using uniquely named
 temporary databases, which are dropped afterward without touching application tables.

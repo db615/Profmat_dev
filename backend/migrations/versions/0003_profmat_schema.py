@@ -9,6 +9,41 @@ down_revision = "0002_mariadb_datetime_precision"
 branch_labels = None
 depends_on = None
 
+REQUIRED_COLUMNS = {
+    "universities": {"id", "name", "country_code", "website", "ranking", "description"},
+    "departments": {"id", "university_id", "name", "description"},
+    "professors": {
+        "id",
+        "university_id",
+        "department_id",
+        "name",
+        "email",
+        "designation",
+        "research_areas",
+        "profile_url",
+    },
+    "course_programs": {
+        "id",
+        "university_id",
+        "name",
+        "degree_level",
+        "field_of_study",
+        "admission_requirements",
+        "application_deadline",
+        "application_url",
+    },
+    "fundings": {
+        "id",
+        "university_id",
+        "title",
+        "funding_type",
+        "eligibility",
+        "amount",
+        "deadline",
+        "application_url",
+    },
+}
+
 
 def upgrade() -> None:
     bind = op.get_bind()
@@ -18,12 +53,27 @@ def upgrade() -> None:
     def create_if_missing(table_name: str, create_fn):
         if table_name not in existing_tables:
             create_fn()
+            return
+        expected = REQUIRED_COLUMNS.get(table_name)
+        if expected is None:
+            return
+        actual = {column["name"] for column in inspector.get_columns(table_name)}
+        missing = expected - actual
+        if missing:
+            raise RuntimeError(
+                f"Existing table {table_name!r} is incompatible with the Profmat schema; "
+                f"missing columns: {', '.join(sorted(missing))}. This usually means raw "
+                "crawler tables share the same name. Move raw data to a separate "
+                "schema/database (or prefix the raw tables) before running this migration."
+            )
 
     def _create_academic_profiles():
         op.create_table(
             "academic_profiles",
             sa.Column("id", sa.Uuid(), primary_key=True),
-            sa.Column("user_id", sa.Uuid(), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
+            sa.Column(
+                "user_id", sa.Uuid(), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+            ),
             sa.Column("degree_level", sa.String(100)),
             sa.Column("field_of_study", sa.String(200)),
             sa.Column("previous_university", sa.String(300)),
@@ -39,7 +89,9 @@ def upgrade() -> None:
         op.create_table(
             "research_profiles",
             sa.Column("id", sa.Uuid(), primary_key=True),
-            sa.Column("user_id", sa.Uuid(), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
+            sa.Column(
+                "user_id", sa.Uuid(), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+            ),
             sa.Column("research_interests", sa.Text()),
             sa.Column("publications", sa.Text()),
             sa.Column("skills", sa.Text()),
@@ -54,7 +106,9 @@ def upgrade() -> None:
         op.create_table(
             "cvs",
             sa.Column("id", sa.Uuid(), primary_key=True),
-            sa.Column("user_id", sa.Uuid(), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
+            sa.Column(
+                "user_id", sa.Uuid(), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+            ),
             sa.Column("file_url", sa.String(1000), nullable=False),
             sa.Column("version", sa.String(50)),
             sa.Column("uploaded_at", sa.DateTime(timezone=True), nullable=False),
@@ -78,12 +132,21 @@ def upgrade() -> None:
         op.create_table(
             "country_preferences",
             sa.Column("id", sa.Uuid(), primary_key=True),
-            sa.Column("user_id", sa.Uuid(), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
-            sa.Column("country_code", sa.String(10), sa.ForeignKey("countries.country_code"), nullable=False),
+            sa.Column(
+                "user_id", sa.Uuid(), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+            ),
+            sa.Column(
+                "country_code",
+                sa.String(10),
+                sa.ForeignKey("countries.country_code"),
+                nullable=False,
+            ),
             sa.Column("priority", sa.Integer()),
         )
         op.create_index("ix_country_preferences_user_id", "country_preferences", ["user_id"])
-        op.create_index("ix_country_preferences_country_code", "country_preferences", ["country_code"])
+        op.create_index(
+            "ix_country_preferences_country_code", "country_preferences", ["country_code"]
+        )
 
     create_if_missing("country_preferences", _create_country_preferences)
 
@@ -91,7 +154,12 @@ def upgrade() -> None:
         op.create_table(
             "visa_information",
             sa.Column("id", sa.Uuid(), primary_key=True),
-            sa.Column("country_code", sa.String(10), sa.ForeignKey("countries.country_code"), nullable=False),
+            sa.Column(
+                "country_code",
+                sa.String(10),
+                sa.ForeignKey("countries.country_code"),
+                nullable=False,
+            ),
             sa.Column("visa_type", sa.String(100)),
             sa.Column("requirements", sa.Text()),
             sa.Column("processing_time", sa.String(100)),
@@ -106,7 +174,12 @@ def upgrade() -> None:
             "universities",
             sa.Column("id", sa.Uuid(), primary_key=True),
             sa.Column("name", sa.String(300), nullable=False),
-            sa.Column("country_code", sa.String(10), sa.ForeignKey("countries.country_code"), nullable=False),
+            sa.Column(
+                "country_code",
+                sa.String(10),
+                sa.ForeignKey("countries.country_code"),
+                nullable=False,
+            ),
             sa.Column("website", sa.String(500)),
             sa.Column("ranking", sa.String(100)),
             sa.Column("description", sa.Text()),
@@ -119,7 +192,12 @@ def upgrade() -> None:
         op.create_table(
             "departments",
             sa.Column("id", sa.Uuid(), primary_key=True),
-            sa.Column("university_id", sa.Uuid(), sa.ForeignKey("universities.id", ondelete="CASCADE"), nullable=False),
+            sa.Column(
+                "university_id",
+                sa.Uuid(),
+                sa.ForeignKey("universities.id", ondelete="CASCADE"),
+                nullable=False,
+            ),
             sa.Column("name", sa.String(300), nullable=False),
             sa.Column("description", sa.Text()),
         )
@@ -131,8 +209,15 @@ def upgrade() -> None:
         op.create_table(
             "professors",
             sa.Column("id", sa.Uuid(), primary_key=True),
-            sa.Column("university_id", sa.Uuid(), sa.ForeignKey("universities.id", ondelete="CASCADE"), nullable=False),
-            sa.Column("department_id", sa.Uuid(), sa.ForeignKey("departments.id", ondelete="SET NULL")),
+            sa.Column(
+                "university_id",
+                sa.Uuid(),
+                sa.ForeignKey("universities.id", ondelete="CASCADE"),
+                nullable=False,
+            ),
+            sa.Column(
+                "department_id", sa.Uuid(), sa.ForeignKey("departments.id", ondelete="SET NULL")
+            ),
             sa.Column("name", sa.String(200), nullable=False),
             sa.Column("email", sa.String(320)),
             sa.Column("designation", sa.String(200)),
@@ -148,7 +233,12 @@ def upgrade() -> None:
         op.create_table(
             "course_programs",
             sa.Column("id", sa.Uuid(), primary_key=True),
-            sa.Column("university_id", sa.Uuid(), sa.ForeignKey("universities.id", ondelete="CASCADE"), nullable=False),
+            sa.Column(
+                "university_id",
+                sa.Uuid(),
+                sa.ForeignKey("universities.id", ondelete="CASCADE"),
+                nullable=False,
+            ),
             sa.Column("name", sa.String(300), nullable=False),
             sa.Column("degree_level", sa.String(100)),
             sa.Column("field_of_study", sa.String(200)),
@@ -164,7 +254,9 @@ def upgrade() -> None:
         op.create_table(
             "fundings",
             sa.Column("id", sa.Uuid(), primary_key=True),
-            sa.Column("university_id", sa.Uuid(), sa.ForeignKey("universities.id", ondelete="SET NULL")),
+            sa.Column(
+                "university_id", sa.Uuid(), sa.ForeignKey("universities.id", ondelete="SET NULL")
+            ),
             sa.Column("title", sa.String(300), nullable=False),
             sa.Column("funding_type", sa.String(100)),
             sa.Column("eligibility", sa.Text()),
@@ -180,10 +272,20 @@ def upgrade() -> None:
         op.create_table(
             "match_results",
             sa.Column("id", sa.Uuid(), primary_key=True),
-            sa.Column("user_id", sa.Uuid(), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
-            sa.Column("professor_id", sa.Uuid(), sa.ForeignKey("professors.id", ondelete="SET NULL")),
-            sa.Column("university_id", sa.Uuid(), sa.ForeignKey("universities.id", ondelete="SET NULL")),
-            sa.Column("course_program_id", sa.Uuid(), sa.ForeignKey("course_programs.id", ondelete="SET NULL")),
+            sa.Column(
+                "user_id", sa.Uuid(), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+            ),
+            sa.Column(
+                "professor_id", sa.Uuid(), sa.ForeignKey("professors.id", ondelete="SET NULL")
+            ),
+            sa.Column(
+                "university_id", sa.Uuid(), sa.ForeignKey("universities.id", ondelete="SET NULL")
+            ),
+            sa.Column(
+                "course_program_id",
+                sa.Uuid(),
+                sa.ForeignKey("course_programs.id", ondelete="SET NULL"),
+            ),
             sa.Column("funding_id", sa.Uuid(), sa.ForeignKey("fundings.id", ondelete="SET NULL")),
             sa.Column("match_score", sa.Float()),
             sa.Column("explanation", sa.Text()),
@@ -199,8 +301,15 @@ def upgrade() -> None:
         op.create_table(
             "professor_outreach",
             sa.Column("id", sa.Uuid(), primary_key=True),
-            sa.Column("user_id", sa.Uuid(), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
-            sa.Column("professor_id", sa.Uuid(), sa.ForeignKey("professors.id", ondelete="CASCADE"), nullable=False),
+            sa.Column(
+                "user_id", sa.Uuid(), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+            ),
+            sa.Column(
+                "professor_id",
+                sa.Uuid(),
+                sa.ForeignKey("professors.id", ondelete="CASCADE"),
+                nullable=False,
+            ),
             sa.Column("funding_id", sa.Uuid(), sa.ForeignKey("fundings.id", ondelete="SET NULL")),
             sa.Column("purpose", sa.Text()),
             sa.Column("stage", sa.String(100)),
@@ -211,7 +320,9 @@ def upgrade() -> None:
             sa.Column("outcome", sa.String(100)),
         )
         op.create_index("ix_professor_outreach_user_id", "professor_outreach", ["user_id"])
-        op.create_index("ix_professor_outreach_professor_id", "professor_outreach", ["professor_id"])
+        op.create_index(
+            "ix_professor_outreach_professor_id", "professor_outreach", ["professor_id"]
+        )
 
     create_if_missing("professor_outreach", _create_professor_outreach)
 
@@ -219,7 +330,12 @@ def upgrade() -> None:
         op.create_table(
             "email_records",
             sa.Column("id", sa.Uuid(), primary_key=True),
-            sa.Column("outreach_id", sa.Uuid(), sa.ForeignKey("professor_outreach.id", ondelete="CASCADE"), nullable=False),
+            sa.Column(
+                "outreach_id",
+                sa.Uuid(),
+                sa.ForeignKey("professor_outreach.id", ondelete="CASCADE"),
+                nullable=False,
+            ),
             sa.Column("subject", sa.String(500)),
             sa.Column("body", sa.Text()),
             sa.Column("direction", sa.String(20)),
@@ -235,13 +351,22 @@ def upgrade() -> None:
         op.create_table(
             "professor_outreach_stage_history",
             sa.Column("id", sa.Uuid(), primary_key=True),
-            sa.Column("outreach_id", sa.Uuid(), sa.ForeignKey("professor_outreach.id", ondelete="CASCADE"), nullable=False),
+            sa.Column(
+                "outreach_id",
+                sa.Uuid(),
+                sa.ForeignKey("professor_outreach.id", ondelete="CASCADE"),
+                nullable=False,
+            ),
             sa.Column("previous_stage", sa.String(100)),
             sa.Column("new_stage", sa.String(100)),
             sa.Column("changed_at", sa.DateTime(timezone=True), nullable=False),
             sa.Column("notes", sa.Text()),
         )
-        op.create_index("ix_professor_outreach_stage_history_outreach_id", "professor_outreach_stage_history", ["outreach_id"])
+        op.create_index(
+            "ix_professor_outreach_stage_history_outreach_id",
+            "professor_outreach_stage_history",
+            ["outreach_id"],
+        )
 
     create_if_missing("professor_outreach_stage_history", _create_professor_outreach_stage_history)
 
@@ -249,9 +374,21 @@ def upgrade() -> None:
         op.create_table(
             "university_applications",
             sa.Column("id", sa.Uuid(), primary_key=True),
-            sa.Column("user_id", sa.Uuid(), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
-            sa.Column("university_id", sa.Uuid(), sa.ForeignKey("universities.id", ondelete="CASCADE"), nullable=False),
-            sa.Column("course_program_id", sa.Uuid(), sa.ForeignKey("course_programs.id", ondelete="CASCADE"), nullable=False),
+            sa.Column(
+                "user_id", sa.Uuid(), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+            ),
+            sa.Column(
+                "university_id",
+                sa.Uuid(),
+                sa.ForeignKey("universities.id", ondelete="CASCADE"),
+                nullable=False,
+            ),
+            sa.Column(
+                "course_program_id",
+                sa.Uuid(),
+                sa.ForeignKey("course_programs.id", ondelete="CASCADE"),
+                nullable=False,
+            ),
             sa.Column("application_type", sa.String(100)),
             sa.Column("stage", sa.String(100)),
             sa.Column("deadline", sa.Date()),
@@ -259,9 +396,17 @@ def upgrade() -> None:
             sa.Column("application_reference", sa.String(200)),
             sa.Column("decision", sa.String(100)),
         )
-        op.create_index("ix_university_applications_user_id", "university_applications", ["user_id"])
-        op.create_index("ix_university_applications_university_id", "university_applications", ["university_id"])
-        op.create_index("ix_university_applications_course_program_id", "university_applications", ["course_program_id"])
+        op.create_index(
+            "ix_university_applications_user_id", "university_applications", ["user_id"]
+        )
+        op.create_index(
+            "ix_university_applications_university_id", "university_applications", ["university_id"]
+        )
+        op.create_index(
+            "ix_university_applications_course_program_id",
+            "university_applications",
+            ["course_program_id"],
+        )
 
     create_if_missing("university_applications", _create_university_applications)
 
@@ -269,13 +414,22 @@ def upgrade() -> None:
         op.create_table(
             "application_documents",
             sa.Column("id", sa.Uuid(), primary_key=True),
-            sa.Column("university_application_id", sa.Uuid(), sa.ForeignKey("university_applications.id", ondelete="CASCADE"), nullable=False),
+            sa.Column(
+                "university_application_id",
+                sa.Uuid(),
+                sa.ForeignKey("university_applications.id", ondelete="CASCADE"),
+                nullable=False,
+            ),
             sa.Column("document_type", sa.String(100)),
             sa.Column("file_url", sa.String(1000), nullable=False),
             sa.Column("status", sa.String(50)),
             sa.Column("uploaded_at", sa.DateTime(timezone=True), nullable=False),
         )
-        op.create_index("ix_application_documents_university_application_id", "application_documents", ["university_application_id"])
+        op.create_index(
+            "ix_application_documents_university_application_id",
+            "application_documents",
+            ["university_application_id"],
+        )
 
     create_if_missing("application_documents", _create_application_documents)
 
@@ -283,23 +437,44 @@ def upgrade() -> None:
         op.create_table(
             "university_application_stage_history",
             sa.Column("id", sa.Uuid(), primary_key=True),
-            sa.Column("application_id", sa.Uuid(), sa.ForeignKey("university_applications.id", ondelete="CASCADE"), nullable=False),
+            sa.Column(
+                "application_id",
+                sa.Uuid(),
+                sa.ForeignKey("university_applications.id", ondelete="CASCADE"),
+                nullable=False,
+            ),
             sa.Column("previous_stage", sa.String(100)),
             sa.Column("new_stage", sa.String(100)),
             sa.Column("changed_at", sa.DateTime(timezone=True), nullable=False),
             sa.Column("notes", sa.Text()),
         )
-        op.create_index("ix_university_application_stage_history_application_id", "university_application_stage_history", ["application_id"])
+        op.create_index(
+            "ix_university_application_stage_history_application_id",
+            "university_application_stage_history",
+            ["application_id"],
+        )
 
-    create_if_missing("university_application_stage_history", _create_university_application_stage_history)
+    create_if_missing(
+        "university_application_stage_history", _create_university_application_stage_history
+    )
 
     def _create_checklists():
         op.create_table(
             "checklists",
             sa.Column("id", sa.Uuid(), primary_key=True),
-            sa.Column("user_id", sa.Uuid(), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
-            sa.Column("professor_outreach_id", sa.Uuid(), sa.ForeignKey("professor_outreach.id", ondelete="CASCADE")),
-            sa.Column("university_application_id", sa.Uuid(), sa.ForeignKey("university_applications.id", ondelete="CASCADE")),
+            sa.Column(
+                "user_id", sa.Uuid(), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+            ),
+            sa.Column(
+                "professor_outreach_id",
+                sa.Uuid(),
+                sa.ForeignKey("professor_outreach.id", ondelete="CASCADE"),
+            ),
+            sa.Column(
+                "university_application_id",
+                sa.Uuid(),
+                sa.ForeignKey("university_applications.id", ondelete="CASCADE"),
+            ),
             sa.Column("title", sa.String(300)),
             sa.Column("checklist_type", sa.String(100)),
             sa.Column("status", sa.String(50)),
@@ -312,7 +487,12 @@ def upgrade() -> None:
         op.create_table(
             "checklist_items",
             sa.Column("id", sa.Uuid(), primary_key=True),
-            sa.Column("checklist_id", sa.Uuid(), sa.ForeignKey("checklists.id", ondelete="CASCADE"), nullable=False),
+            sa.Column(
+                "checklist_id",
+                sa.Uuid(),
+                sa.ForeignKey("checklists.id", ondelete="CASCADE"),
+                nullable=False,
+            ),
             sa.Column("title", sa.String(300), nullable=False),
             sa.Column("description", sa.Text()),
             sa.Column("status", sa.String(50)),
@@ -328,16 +508,26 @@ def upgrade() -> None:
         op.create_table(
             "ai_application_strategies",
             sa.Column("id", sa.Uuid(), primary_key=True),
-            sa.Column("user_id", sa.Uuid(), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
+            sa.Column(
+                "user_id", sa.Uuid(), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+            ),
             sa.Column("target_type", sa.String(50)),
-            sa.Column("outreach_id", sa.Uuid(), sa.ForeignKey("professor_outreach.id", ondelete="CASCADE")),
-            sa.Column("application_id", sa.Uuid(), sa.ForeignKey("university_applications.id", ondelete="CASCADE")),
+            sa.Column(
+                "outreach_id", sa.Uuid(), sa.ForeignKey("professor_outreach.id", ondelete="CASCADE")
+            ),
+            sa.Column(
+                "application_id",
+                sa.Uuid(),
+                sa.ForeignKey("university_applications.id", ondelete="CASCADE"),
+            ),
             sa.Column("strategy", sa.Text()),
             sa.Column("recommended_timeline", sa.Text()),
             sa.Column("model_version", sa.String(100)),
             sa.Column("generated_at", sa.DateTime(timezone=True), nullable=False),
         )
-        op.create_index("ix_ai_application_strategies_user_id", "ai_application_strategies", ["user_id"])
+        op.create_index(
+            "ix_ai_application_strategies_user_id", "ai_application_strategies", ["user_id"]
+        )
 
     create_if_missing("ai_application_strategies", _create_ai_application_strategies)
 
@@ -345,7 +535,12 @@ def upgrade() -> None:
         op.create_table(
             "ai_recommendations",
             sa.Column("id", sa.Uuid(), primary_key=True),
-            sa.Column("strategy_id", sa.Uuid(), sa.ForeignKey("ai_application_strategies.id", ondelete="CASCADE"), nullable=False),
+            sa.Column(
+                "strategy_id",
+                sa.Uuid(),
+                sa.ForeignKey("ai_application_strategies.id", ondelete="CASCADE"),
+                nullable=False,
+            ),
             sa.Column("recommendation_type", sa.String(100)),
             sa.Column("rationale", sa.Text()),
             sa.Column("priority", sa.String(50)),
@@ -371,14 +566,23 @@ def upgrade() -> None:
         op.create_table(
             "university_advertisements",
             sa.Column("id", sa.Uuid(), primary_key=True),
-            sa.Column("university_id", sa.Uuid(), sa.ForeignKey("universities.id", ondelete="CASCADE"), nullable=False),
+            sa.Column(
+                "university_id",
+                sa.Uuid(),
+                sa.ForeignKey("universities.id", ondelete="CASCADE"),
+                nullable=False,
+            ),
             sa.Column("title", sa.String(500), nullable=False),
             sa.Column("description", sa.Text()),
             sa.Column("target_url", sa.String(1000)),
             sa.Column("start_date", sa.Date()),
             sa.Column("end_date", sa.Date()),
         )
-        op.create_index("ix_university_advertisements_university_id", "university_advertisements", ["university_id"])
+        op.create_index(
+            "ix_university_advertisements_university_id",
+            "university_advertisements",
+            ["university_id"],
+        )
 
     create_if_missing("university_advertisements", _create_university_advertisements)
 

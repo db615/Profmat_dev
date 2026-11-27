@@ -7,11 +7,17 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 
 from app.api.dependencies import DatabaseDep, UserDep
-from app.core.database import utcnow
 from app.api.routes.common import commit, get_owned
-from app.models import EmailRecord, Professor, ProfessorOutreach, ProfessorOutreachStageHistory
+from app.core.database import utcnow
+from app.models import (
+    EmailRecord,
+    Professor,
+    ProfessorOutreach,
+    ProfessorOutreachStageHistory,
+)
+from app.schemas.profmat import EmailRecordRead, ProfessorOutreachRead
 
-router = APIRouter(prefix="/api/v1", tags=["Outreach"])
+router = APIRouter(tags=["Outreach"])
 
 
 class Payload(BaseModel):
@@ -40,33 +46,48 @@ class EmailInput(Payload):
     response_summary: str | None = None
 
 
-def list_outreach(user: UserDep, session: DatabaseDep):
-    return list(session.scalars(select(ProfessorOutreach).where(ProfessorOutreach.user_id == user.id)))
+def list_outreach(user: UserDep, session: DatabaseDep) -> list[ProfessorOutreachRead]:
+    return list(
+        session.scalars(select(ProfessorOutreach).where(ProfessorOutreach.user_id == user.id))
+    )
 
 
-def create_outreach(data: OutreachInput, user: UserDep, session: DatabaseDep):
+def create_outreach(
+    data: OutreachInput, user: UserDep, session: DatabaseDep
+) -> ProfessorOutreachRead:
     if session.get(Professor, data.professor_id) is None:
         raise HTTPException(status_code=404, detail="Professor not found")
     payload = data.model_dump()
-    for key in ["planned_send_at"]:
-        if payload.get(key) and isinstance(payload[key], str):
-            from datetime import datetime as _dt
-            try:
-                payload[key] = _dt.fromisoformat(payload[key])
-            except Exception:
-                payload[key] = None
+    if payload.get("planned_send_at") and isinstance(payload["planned_send_at"], str):
+        from datetime import datetime as _datetime
+
+        try:
+            payload["planned_send_at"] = _datetime.fromisoformat(payload["planned_send_at"])
+        except ValueError:
+            payload["planned_send_at"] = None
     return commit(session, ProfessorOutreach(user_id=user.id, **payload))
 
 
-def update_outreach_stage(outreach_id: UUID, data: StageInput, user: UserDep, session: DatabaseDep):
+def update_outreach_stage(
+    outreach_id: UUID, data: StageInput, user: UserDep, session: DatabaseDep
+) -> ProfessorOutreachRead:
     outreach = get_owned(session, ProfessorOutreach, outreach_id, user.id)
     old = outreach.stage
     outreach.stage = data.stage
-    session.add(ProfessorOutreachStageHistory(outreach_id=outreach.id, previous_stage=old, new_stage=data.stage, notes=data.notes))
+    session.add(
+        ProfessorOutreachStageHistory(
+            outreach_id=outreach.id,
+            previous_stage=old,
+            new_stage=data.stage,
+            notes=data.notes,
+        )
+    )
     return commit(session, outreach)
 
 
-def add_email(outreach_id: UUID, data: EmailInput, user: UserDep, session: DatabaseDep):
+def add_email(
+    outreach_id: UUID, data: EmailInput, user: UserDep, session: DatabaseDep
+) -> EmailRecordRead:
     get_owned(session, ProfessorOutreach, outreach_id, user.id)
     email = EmailRecord(outreach_id=outreach_id, **data.model_dump())
     if data.direction == "OUTBOUND":
@@ -74,7 +95,26 @@ def add_email(outreach_id: UUID, data: EmailInput, user: UserDep, session: Datab
     return commit(session, email)
 
 
-router.add_api_route("/outreach", list_outreach, methods=["GET"])
-router.add_api_route("/outreach", create_outreach, methods=["POST"], status_code=status.HTTP_201_CREATED)
-router.add_api_route("/outreach/{outreach_id}/stage", update_outreach_stage, methods=["PATCH"])
-router.add_api_route("/outreach/{outreach_id}/emails", add_email, methods=["POST"], status_code=status.HTTP_201_CREATED)
+router.add_api_route(
+    "/outreach", list_outreach, methods=["GET"], response_model=list[ProfessorOutreachRead]
+)
+router.add_api_route(
+    "/outreach",
+    create_outreach,
+    methods=["POST"],
+    status_code=status.HTTP_201_CREATED,
+    response_model=ProfessorOutreachRead,
+)
+router.add_api_route(
+    "/outreach/{outreach_id}/stage",
+    update_outreach_stage,
+    methods=["PATCH"],
+    response_model=ProfessorOutreachRead,
+)
+router.add_api_route(
+    "/outreach/{outreach_id}/emails",
+    add_email,
+    methods=["POST"],
+    status_code=status.HTTP_201_CREATED,
+    response_model=EmailRecordRead,
+)

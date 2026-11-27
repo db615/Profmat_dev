@@ -1,8 +1,8 @@
-from datetime import datetime, date
+from datetime import date, datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Integer, String, Text, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base, UTCDateTime, utcnow
 
@@ -136,7 +136,9 @@ class Department(Base):
     __tablename__ = "departments"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    university_id: Mapped[UUID] = mapped_column(ForeignKey("universities.id", ondelete="CASCADE"), index=True)
+    university_id: Mapped[UUID] = mapped_column(
+        ForeignKey("universities.id", ondelete="CASCADE"), index=True
+    )
     name: Mapped[str] = mapped_column(String(300))
     description: Mapped[str | None] = mapped_column(Text)
 
@@ -145,8 +147,12 @@ class Professor(Base):
     __tablename__ = "professors"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    university_id: Mapped[UUID] = mapped_column(ForeignKey("universities.id", ondelete="CASCADE"), index=True)
-    department_id: Mapped[UUID | None] = mapped_column(ForeignKey("departments.id", ondelete="SET NULL"), index=True)
+    university_id: Mapped[UUID] = mapped_column(
+        ForeignKey("universities.id", ondelete="CASCADE"), index=True
+    )
+    department_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("departments.id", ondelete="SET NULL"), index=True
+    )
     name: Mapped[str] = mapped_column(String(200))
     email: Mapped[str | None] = mapped_column(String(320))
     designation: Mapped[str | None] = mapped_column(String(200))
@@ -158,7 +164,9 @@ class CourseProgram(Base):
     __tablename__ = "course_programs"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    university_id: Mapped[UUID] = mapped_column(ForeignKey("universities.id", ondelete="CASCADE"), index=True)
+    university_id: Mapped[UUID] = mapped_column(
+        ForeignKey("universities.id", ondelete="CASCADE"), index=True
+    )
     name: Mapped[str] = mapped_column(String(300))
     degree_level: Mapped[str | None] = mapped_column(String(100))
     field_of_study: Mapped[str | None] = mapped_column(String(200))
@@ -171,7 +179,9 @@ class Funding(Base):
     __tablename__ = "fundings"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    university_id: Mapped[UUID | None] = mapped_column(ForeignKey("universities.id", ondelete="SET NULL"), index=True)
+    university_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("universities.id", ondelete="SET NULL"), index=True
+    )
     title: Mapped[str] = mapped_column(String(300))
     funding_type: Mapped[str | None] = mapped_column(String(100))
     eligibility: Mapped[str | None] = mapped_column(Text)
@@ -184,19 +194,29 @@ class MatchResult(Base):
     __tablename__ = "match_results"
     __table_args__ = (
         CheckConstraint(
-            "(professor_id IS NOT NULL AND university_id IS NULL AND course_program_id IS NULL AND funding_id IS NULL) OR "
-            "(professor_id IS NULL AND university_id IS NOT NULL AND course_program_id IS NULL AND funding_id IS NULL) OR "
-            "(professor_id IS NULL AND university_id IS NULL AND course_program_id IS NOT NULL AND funding_id IS NULL) OR "
-            "(professor_id IS NULL AND university_id IS NULL AND course_program_id IS NULL AND funding_id IS NOT NULL)",
+            "(professor_id IS NOT NULL AND university_id IS NULL "
+            "AND course_program_id IS NULL AND funding_id IS NULL) OR "
+            "(professor_id IS NULL AND university_id IS NOT NULL "
+            "AND course_program_id IS NULL AND funding_id IS NULL) OR "
+            "(professor_id IS NULL AND university_id IS NULL "
+            "AND course_program_id IS NOT NULL AND funding_id IS NULL) OR "
+            "(professor_id IS NULL AND university_id IS NULL "
+            "AND course_program_id IS NULL AND funding_id IS NOT NULL)",
             name="ck_match_results_exactly_one",
         ),
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    professor_id: Mapped[UUID | None] = mapped_column(ForeignKey("professors.id", ondelete="SET NULL"))
-    university_id: Mapped[UUID | None] = mapped_column(ForeignKey("universities.id", ondelete="SET NULL"))
-    course_program_id: Mapped[UUID | None] = mapped_column(ForeignKey("course_programs.id", ondelete="SET NULL"))
+    professor_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("professors.id", ondelete="SET NULL")
+    )
+    university_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("universities.id", ondelete="SET NULL")
+    )
+    course_program_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("course_programs.id", ondelete="SET NULL")
+    )
     funding_id: Mapped[UUID | None] = mapped_column(ForeignKey("fundings.id", ondelete="SET NULL"))
     match_score: Mapped[float | None] = mapped_column()
     explanation: Mapped[str | None] = mapped_column(Text)
@@ -210,7 +230,9 @@ class ProfessorOutreach(Base):
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    professor_id: Mapped[UUID] = mapped_column(ForeignKey("professors.id", ondelete="CASCADE"), index=True)
+    professor_id: Mapped[UUID] = mapped_column(
+        ForeignKey("professors.id", ondelete="CASCADE"), index=True
+    )
     funding_id: Mapped[UUID | None] = mapped_column(ForeignKey("fundings.id", ondelete="SET NULL"))
     purpose: Mapped[str | None] = mapped_column(Text)
     stage: Mapped[str | None] = mapped_column(String(100))
@@ -225,7 +247,9 @@ class EmailRecord(Base):
     __tablename__ = "email_records"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    outreach_id: Mapped[UUID] = mapped_column(ForeignKey("professor_outreach.id", ondelete="CASCADE"), index=True)
+    outreach_id: Mapped[UUID] = mapped_column(
+        ForeignKey("professor_outreach.id", ondelete="CASCADE"), index=True
+    )
     subject: Mapped[str | None] = mapped_column(String(500))
     body: Mapped[str | None] = mapped_column(Text)
     direction: Mapped[str | None] = mapped_column(String(20))
@@ -238,7 +262,9 @@ class ProfessorOutreachStageHistory(Base):
     __tablename__ = "professor_outreach_stage_history"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    outreach_id: Mapped[UUID] = mapped_column(ForeignKey("professor_outreach.id", ondelete="CASCADE"), index=True)
+    outreach_id: Mapped[UUID] = mapped_column(
+        ForeignKey("professor_outreach.id", ondelete="CASCADE"), index=True
+    )
     previous_stage: Mapped[str | None] = mapped_column(String(100))
     new_stage: Mapped[str | None] = mapped_column(String(100))
     changed_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
@@ -250,8 +276,12 @@ class UniversityApplication(Base):
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    university_id: Mapped[UUID] = mapped_column(ForeignKey("universities.id", ondelete="CASCADE"), index=True)
-    course_program_id: Mapped[UUID] = mapped_column(ForeignKey("course_programs.id", ondelete="CASCADE"), index=True)
+    university_id: Mapped[UUID] = mapped_column(
+        ForeignKey("universities.id", ondelete="CASCADE"), index=True
+    )
+    course_program_id: Mapped[UUID] = mapped_column(
+        ForeignKey("course_programs.id", ondelete="CASCADE"), index=True
+    )
     application_type: Mapped[str | None] = mapped_column(String(100))
     stage: Mapped[str | None] = mapped_column(String(100))
     deadline: Mapped[date | None] = mapped_column()
@@ -264,7 +294,9 @@ class ApplicationDocument(Base):
     __tablename__ = "application_documents"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    university_application_id: Mapped[UUID] = mapped_column(ForeignKey("university_applications.id", ondelete="CASCADE"), index=True)
+    university_application_id: Mapped[UUID] = mapped_column(
+        ForeignKey("university_applications.id", ondelete="CASCADE"), index=True
+    )
     document_type: Mapped[str | None] = mapped_column(String(100))
     file_url: Mapped[str] = mapped_column(String(1000))
     status: Mapped[str | None] = mapped_column(String(50))
@@ -275,7 +307,9 @@ class UniversityApplicationStageHistory(Base):
     __tablename__ = "university_application_stage_history"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    application_id: Mapped[UUID] = mapped_column(ForeignKey("university_applications.id", ondelete="CASCADE"), index=True)
+    application_id: Mapped[UUID] = mapped_column(
+        ForeignKey("university_applications.id", ondelete="CASCADE"), index=True
+    )
     previous_stage: Mapped[str | None] = mapped_column(String(100))
     new_stage: Mapped[str | None] = mapped_column(String(100))
     changed_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
@@ -294,8 +328,12 @@ class Checklist(Base):
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    professor_outreach_id: Mapped[UUID | None] = mapped_column(ForeignKey("professor_outreach.id", ondelete="CASCADE"))
-    university_application_id: Mapped[UUID | None] = mapped_column(ForeignKey("university_applications.id", ondelete="CASCADE"))
+    professor_outreach_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("professor_outreach.id", ondelete="CASCADE")
+    )
+    university_application_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("university_applications.id", ondelete="CASCADE")
+    )
     title: Mapped[str | None] = mapped_column(String(300))
     checklist_type: Mapped[str | None] = mapped_column(String(100))
     status: Mapped[str | None] = mapped_column(String(50))
@@ -305,7 +343,9 @@ class ChecklistItem(Base):
     __tablename__ = "checklist_items"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    checklist_id: Mapped[UUID] = mapped_column(ForeignKey("checklists.id", ondelete="CASCADE"), index=True)
+    checklist_id: Mapped[UUID] = mapped_column(
+        ForeignKey("checklists.id", ondelete="CASCADE"), index=True
+    )
     title: Mapped[str] = mapped_column(String(300))
     description: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str | None] = mapped_column(String(50))
@@ -327,8 +367,12 @@ class AIApplicationStrategy(Base):
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     target_type: Mapped[str | None] = mapped_column(String(50))
-    outreach_id: Mapped[UUID | None] = mapped_column(ForeignKey("professor_outreach.id", ondelete="CASCADE"))
-    application_id: Mapped[UUID | None] = mapped_column(ForeignKey("university_applications.id", ondelete="CASCADE"))
+    outreach_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("professor_outreach.id", ondelete="CASCADE")
+    )
+    application_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("university_applications.id", ondelete="CASCADE")
+    )
     strategy: Mapped[str | None] = mapped_column(Text)
     recommended_timeline: Mapped[str | None] = mapped_column(Text)
     model_version: Mapped[str | None] = mapped_column(String(100))
@@ -339,7 +383,9 @@ class AIRecommendation(Base):
     __tablename__ = "ai_recommendations"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    strategy_id: Mapped[UUID] = mapped_column(ForeignKey("ai_application_strategies.id", ondelete="CASCADE"), index=True)
+    strategy_id: Mapped[UUID] = mapped_column(
+        ForeignKey("ai_application_strategies.id", ondelete="CASCADE"), index=True
+    )
     recommendation_type: Mapped[str | None] = mapped_column(String(100))
     rationale: Mapped[str | None] = mapped_column(Text)
     priority: Mapped[str | None] = mapped_column(String(50))
@@ -360,7 +406,9 @@ class UniversityAdvertisement(Base):
     __tablename__ = "university_advertisements"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    university_id: Mapped[UUID] = mapped_column(ForeignKey("universities.id", ondelete="CASCADE"), index=True)
+    university_id: Mapped[UUID] = mapped_column(
+        ForeignKey("universities.id", ondelete="CASCADE"), index=True
+    )
     title: Mapped[str] = mapped_column(String(500))
     description: Mapped[str | None] = mapped_column(Text)
     target_url: Mapped[str | None] = mapped_column(String(1000))

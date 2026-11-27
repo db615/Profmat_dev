@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     cookie_samesite: Literal["lax", "strict", "none"] = "lax"
     allowed_origins: list[str] = ["http://localhost:3000", "http://localhost:8000"]
     auth_requests_per_minute: int = Field(default=30, ge=1)
+    crawler_database_url: str | None = None
+    crawler_default_country: str = "US"
 
     @model_validator(mode="after")
     def validate_browser_security(self) -> Self:

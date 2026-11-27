@@ -3,6 +3,7 @@ from uuid import uuid4
 import pytest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
+from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -11,6 +12,7 @@ from sqlalchemy.schema import CreateSchema, DropSchema
 from app.core.config import Settings
 from app.core.database import Base, create_database_engine
 from app.core.security import AccessTokens
+from app.main import create_app
 
 
 def pytest_addoption(parser):
@@ -71,3 +73,21 @@ def database(request):
 def session(database):
     with sessionmaker(bind=database, expire_on_commit=False)() as session:
         yield session
+
+
+@pytest.fixture
+def app(database, tokens):
+    settings = Settings(
+        _env_file=None,
+        environment="test",
+        database_url="sqlite+pysqlite://",
+        cookie_secure=False,
+        google_client_id="test-client",
+    )
+    return create_app(settings, database, tokens)
+
+
+@pytest.fixture
+def client(app):
+    with TestClient(app, headers={"X-CSRF-Protection": "1"}) as client:
+        yield client
